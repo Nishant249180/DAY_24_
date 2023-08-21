@@ -1,0 +1,131 @@
+1. Displaying the record of the file using partial free format of subfile.
+
+
+ Columns . . . :    6  76            Edit                      TEN31LIB/TRNGSRC 
+ SEU==>                                                                 DPTQRYR 
+ FMT H  HKeywords++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+        *************** Beginning of data ************************************* 
+0000.01 HDFTACTGRP(*NO)                                                         
+0002.00 FEMPLF9    IF   E           K DISK                                      
+0003.00 FDEPTQRYDC CF   E             WORKSTN SFILE(QRYSFL:RRN)                 
+0004.00 DRRN              S              3P 0                                   
+0004.01 DgetQueryResult   pr                                                    
+0004.02 D                                2P 0                                   
+0005.00 C/FREE                                                                  
+0006.00                  *IN58=*ON;                                             
+0007.00                  DOW *IN03=*OFF;                                        
+0008.00                       WRITE FOOTER;                                     
+0009.00                       EXFMT QRYCTL;                                     
+0009.01                         if *in03;                                       
+0009.02                            leave;                                       
+0009.03                         endif;                                          
+0010.00                         getQueryResult(qdept); // procedure call        
+0011.00                  enddo;                                                 
+0011.01                         *inlr=*on;                                      
+0011.02  /end-free                                                              
+0012.00 PgetQueryResult   b                                                     
+0013.00 DgetQueryResult   PI                                                    
+0014.00 Ddpt                             2p 0                                   
+0015.00 c/FREE                                                                  
+0016.00                     // clear subfile...& initialize rrn                 
+0017.00                     *in59=*on;                                          
+0018.00                     write qryctl;                                       
+0019.00                     rrn=0;                                              
+0020.00                     *in59=*off;                                         
+0021.00                        setll dpt emprec;//position rec-ptr to the       
+0022.00                                         // 1st of key value             
+0023.00                        reade dpt emprec;                                
+0024.00                        dow not %eof;                                    
+0025.00                            rrn+=1;                                      
+0026.00                            write qrysfl;                                
+0027.00                            reade dpt emprec;                            
+0028.00                        enddo;                                           
+0029.00                        *in57=*on;                                       
+0029.01                        if rrn=0;                                        
+0029.02                           *in57=*off;                                   
+0030.00                          msg='No such Dept or has no Employee';         
+0031.00                        endif;                                           
+0031.01  /END-FREE                                                              
+0032.00 PgetQueryResult   e                                                     
+        ****************** End of data **************************************** 
+
+2.Dynamically sorting the data using SQLRPGLE.
+ Columns . . . :    6  76            Edit                      TEN31LIB/TRNGSRC 
+ SEU==>                                                               DYNASORTR 
+ FMT H  HKeywords++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+        *************** Beginning of data ************************************* 
+0000.01 HDFTACTGRP(*NO)                                                         
+0001.00 FDYNASORTD CF   E             WORKSTN SFILE(EMPSFL:SORTRRN)             
+0002.00 DSORTRRN          S              3P 0 INZ(*ZEROS)                       
+0003.00 DRefillData       PR                                                    
+0004.00 D                                1A                                     
+0005.00 DOrdch            S              1A   INZ('A')                          
+0006.00 C                   CALLP     RefillData(Ordch)                         
+0007.00 C                   DOW       NOT *IN03                                 
+0008.00 C                   WRITE     FOOTER                                    
+0009.00 C                   EXFMT     EMPCTL                                    
+0010.00 C   03              LEAVE                                               
+0010.01 C                   EVAL      Ordch=%SUBST(FLD:1:1)                     
+0011.00 C                   CALLP     RefillData(FLD)                           
+0012.00 c                   ENDDO                                               
+0013.00 C                   EVAL      *INLR=*ON                                 
+0014.00 PRefillData       b                                                     
+0015.00 DRefillData       PI                                                    
+0016.00 DOrdch                           1A                                     
+0016.01 DOrdFld           s             10A                                     
+0017.00 DSTMT             S            100A   INZ('SELECT * FROM TEN31LIB/')    
+0018.00 C                   EVAL      STMT=%TRIM(STMT)+'EMPLOYEE ORDER BY '     
+0019.00 C                   SELECT                                              
+0020.00 C                   WHEN      Ordch='A'                                 
+0021.00 C                   EVAL      OrdFld='EMPID'                            
+0023.00 C                   WHEN      Ordch='B'                                                                 
+0024.00 C                   EVAL      OrdFld='NAME'                             
+0025.00 C                   WHEN      Ordch='C'                                 
+0026.00 C                   EVAL      OrdFld='DEPT'                             
+0027.00 C                   WHEN      Ordch='D'                                 
+0028.00 C                   EVAL      OrdFld='GENDER'                           
+0029.00 C                   WHEN      Ordch='E'                                 
+0030.00 C                   EVAL      OrdFld='DOJ'                              
+0031.00 C                   WHEN      Ordch='F'                                 
+0032.00 C                   EVAL      OrdFld='SALARY'                           
+0033.00 C                   OTHER                        
+0034.00 C                   EVAL      OrdFld='EMPID'     
+0035.00 C                   ENDSL                        
+0036.00 C* SUBFILE CLEAR....                             
+0037.00 C                   EVAL      *IN72=*OFF         
+0038.00 C                   WRITE     EMPCTL             
+0038.01 C                   EVAL      SORTRRN=0          
+0039.00 C                   EVAL      *IN72=*ON          
+0040.00 C* PREPARE Sql statement dynamically             
+0041.00 C                   EVAL      STMT=%TRIM(STMT)+' '+%TRIM(OrdFld)        
+0042.00 C/EXEC SQL                                                              
+0043.00 C+ PREPARE S1 FROM :STMT                                                
+0044.00 C/END-EXEC                                                              
+0045.00 C/EXEC SQL                                                              
+0046.00 C+ DECLARE DYNACUR CURSOR FOR S1                                        
+0047.00 C/END-EXEC                                                              
+0048.00 C/EXEC SQL                                                              
+0049.00 C+ OPEN DYNACUR                                                         
+0050.00 C/END-EXEC                                                              
+0051.00 C                   DOW       SQLCODE=0                                 
+0052.00 C/EXEC SQL                                                              
+0053.00 C+ FETCH DYNACUR INTO :EMPID, :NAME,:DEPT,:GENDER,:DOJ,                 
+0054.00 C+ :SALARY                                                              
+0055.00 C/END-EXEC                                                              
+0056.00 C                   IF        SQLCODE=100 OR SQLCODE<0                  
+0057.00 C                   LEAVE                                               
+0058.00 C                   ENDIF                                               
+0059.00 C                   EVAL      SORTRRN+=1                                
+0060.00 C                   WRITE     EMPSFL                                    
+0061.00 C                   ENDDO                                               
+0062.00 C                   EVAL      *IN71=*ON                                 
+0063.00 C                   IF        SORTRRN=0                                 
+0064.00 C                   EVAL      *IN71=*OFF                                
+0067.00 C                   ENDIF                                               
+0068.00 C/EXEC SQL                                                              
+0069.00 C+ CLOSE DYNACUR                                                        
+0070.00 C/END-EXEC                                                              
+0071.00 C                   RETURN                                              
+0072.00 PRefillData       E                                                     
+        ****************** End of data **************************************** 
+                                                                                
