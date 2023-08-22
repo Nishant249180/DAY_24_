@@ -4,7 +4,8 @@
  Columns . . . :    6  76            Edit                      TEN31LIB/TRNGSRC 
  SEU==>                                                                 DPTQRYR 
  FMT H  HKeywords++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-        *************** Beginning of data ************************************* 
+*************** Beginning of data ************************************* 
+        H*SORTING AND REFILLING SORTED SUBFILE ON ANY FIELD RUNTIME
 0000.01 HDFTACTGRP(*NO)                                                         
 0002.00 FEMPLF9    IF   E           K DISK                                      
 0003.00 FDEPTQRYDC CF   E             WORKSTN SFILE(QRYSFL:RRN)                 
